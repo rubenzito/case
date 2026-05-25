@@ -1,0 +1,95 @@
+openapi: "3.0.3"
+
+info:
+  title: Developer Metrics API
+  version: "1.0"
+  description: Consulta de métricas agregadas de desenvolvedores.
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+
+  /health:
+    get:
+      summary: Health check
+      description: Verifica conectividade com SQS e DynamoDB.
+      responses:
+        "200":
+          description: Todos os serviços saudáveis
+          content:
+            application/json:
+              example:
+                status: ok
+                sqs: ok
+                dynamodb: ok
+        "503":
+          description: Um ou mais serviços indisponíveis
+          content:
+            application/json:
+              example:
+                status: degraded
+                sqs: ok
+                dynamodb: "unhealthy: connection refused"
+
+  /metrics/{developer_id}:
+    get:
+      summary: Eventos de um desenvolvedor
+      description: Retorna todos os eventos individuais processados para o developer_id informado.
+      parameters:
+        - name: developer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: dev-alice
+      responses:
+        "200":
+          description: Lista de eventos (pode ser vazia)
+          content:
+            application/json:
+              example:
+                - event_id: a1b2c3d4-e5f6-7890-abcd-ef1234567801
+                  developer_id: dev-alice
+                  metric_type: commits
+                  value: 8
+                  repository: org/backend
+                  timestamp: "2026-04-10T09:00:00Z"
+                  processed_at: "2026-04-10T09:00:05Z"
+                  processor_id: processor-instance-1
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              example:
+                error: erro ao buscar eventos
+
+  /metrics/{developer_id}/summary:
+    get:
+      summary: Resumo agregado de um desenvolvedor
+      description: Retorna totais e médias calculados a partir de todos os eventos do developer_id.
+      parameters:
+        - name: developer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: dev-alice
+      responses:
+        "200":
+          description: Resumo do desenvolvedor
+          content:
+            application/json:
+              example:
+                developer_id: dev-alice
+                total_commits: 12
+                total_pull_requests: 3
+                avg_review_time_minutes: 37.5
+                events_processed: 5
+                last_activity: "2026-04-14T09:00:00Z"
+        "404":
+          description: Developer não encontrado
+          content:
+            application/json:
+              example:
+                error: developer não encontrado

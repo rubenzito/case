@@ -1,0 +1,11 @@
+Arquivo de resultados de testes
+
+Este arquivo pode ser gerado automaticamente executando:
+
+    make testes
+
+O `Makefile` executa os testes em `services/processor` e `services/aggregator`, grava a saída completa dos `go test` e adiciona uma linha em português indicando se cada conjunto de testes "PASSOU" ou "FALHOU".
+
+Observações:
+- O comando `go test` já mostra no terminal `PASS`/`FAIL` por pacote; o alvo `make testes` cria o arquivo `resultado.txt` com uma cópia da saída e um resumo em português.
+- Para executar testes de integração específicos (DLQ / worker pool), use os comandos `go test` com `-run` (exemplos descritos em `testes.md`).
