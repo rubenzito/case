@@ -20,10 +20,22 @@ import (
 	"github.com/rubenzito/case/aggregator/internal/infra/queue"
 	"github.com/rubenzito/case/aggregator/internal/infra/repository"
 	"github.com/rubenzito/case/aggregator/internal/usecase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
+	// Inicializa tracing (stdout exporter para demonstração)
+	tp, err := initTracer()
+	if err != nil {
+		slog.Error("erro ao inicializar tracer", "erro", err)
+		os.Exit(1)
+	}
+	defer func() { _ = tp.Shutdown(context.Background()) }()
 
 	cfg := config.Load()
 
@@ -83,10 +95,21 @@ func main() {
 			go func(id int) {
 				defer workerWg.Done()
 				for msg := range jobs {
-					if err := aggregateUC.Execute(ctx, msg.Event); err != nil {
+					// Extract context from message attributes for distributed tracing
+					carrier := propagation.MapCarrier(msg.Attributes)
+					ctxMsg := otel.GetTextMapPropagator().Extract(ctx, carrier)
+
+					// Start a span for processing this message
+					tracer := otel.Tracer("aggregator")
+					ctxSpan, span := tracer.Start(ctxMsg, "AggregateEvent")
+					if err := aggregateUC.Execute(ctxSpan, msg.Event); err != nil {
+						span.RecordError(err)
 						slog.Error("erro ao agregar evento", "worker", id, "event_id", msg.Event.EventID, "erro", err)
+						span.End()
 						continue
 					}
+					span.End()
+
 					if err := consumer.Delete(ctx, msg.ReceiptHandle); err != nil {
 						slog.Error("erro ao deletar mensagem", "worker", id, "erro", err)
 					}
@@ -125,4 +148,18 @@ func main() {
 	server.Shutdown(context.Background())
 	wg.Wait()
 	slog.Info("aggregator encerrado")
+}
+
+// initTracer configura um TracerProvider com stdout exporter (apenas para demonstração local)
+func initTracer() (*sdktrace.TracerProvider, error) {
+	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	if err != nil {
+		return nil, err
+	}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	return tp, nil
 }

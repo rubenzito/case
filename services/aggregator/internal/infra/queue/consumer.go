@@ -14,6 +14,7 @@ import (
 type Message struct {
 	Event         domain.ProcessedEvent
 	ReceiptHandle string
+	Attributes    map[string]string
 }
 
 type Consumer struct {
@@ -27,9 +28,10 @@ func NewConsumer(client *sqs.Client, queueURL string) *Consumer {
 
 func (c *Consumer) Poll(ctx context.Context) ([]Message, error) {
 	out, err := c.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(c.queueURL),
-		MaxNumberOfMessages: 10,
-		WaitTimeSeconds:     5,
+		QueueUrl:              aws.String(c.queueURL),
+		MaxNumberOfMessages:   10,
+		WaitTimeSeconds:       5,
+		MessageAttributeNames: []string{"All"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("erro ao receber mensagens: %w", err)
@@ -42,9 +44,18 @@ func (c *Consumer) Poll(ctx context.Context) ([]Message, error) {
 			slog.Error("erro ao desserializar mensagem", "erro", err)
 			continue
 		}
+
+		attrs := map[string]string{}
+		for k, v := range msg.MessageAttributes {
+			if v.StringValue != nil {
+				attrs[k] = *v.StringValue
+			}
+		}
+
 		messages = append(messages, Message{
 			Event:         event,
 			ReceiptHandle: *msg.ReceiptHandle,
+			Attributes:    attrs,
 		})
 	}
 	return messages, nil

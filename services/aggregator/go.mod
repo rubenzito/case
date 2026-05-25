@@ -1,6 +1,6 @@
 module github.com/rubenzito/case/aggregator
 
-go 1.21
+go 1.25.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.26.1
@@ -11,7 +11,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.31.4
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/google/uuid v1.6.0
-	go.opentelemetry.io/otel v1.15.0
+	go.opentelemetry.io/otel v1.43.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.0
+	go.opentelemetry.io/otel/sdk v1.43.0
 )
 
 require (
@@ -27,8 +29,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.6 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	go.opentelemetry.io/otel/trace v1.15.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )

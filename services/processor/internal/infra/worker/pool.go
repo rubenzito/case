@@ -7,6 +7,7 @@ import (
 
 	"github.com/rubenzito/case/processor/internal/domain"
 	"github.com/rubenzito/case/processor/internal/infra/queue"
+	"go.opentelemetry.io/otel"
 )
 
 // Processor é a interface mínima que um usecase precisa expor para o pool
@@ -76,8 +77,12 @@ func (p *Pool) Start(ctx context.Context) {
 func (p *Pool) work(ctx context.Context, workerID int, jobs <-chan queue.Message) {
 	for msg := range jobs {
 		log := slog.With("worker_id", workerID, "event_id", msg.Event.EventID)
+		// Start a span for processing this message
+		tracer := otel.Tracer("processor")
+		ctxSpan, span := tracer.Start(ctx, "ProcessEvent")
 
-		err := p.processUC.Execute(ctx, msg.Event)
+		err := p.processUC.Execute(ctxSpan, msg.Event)
+		span.End()
 		if err != nil {
 			// Não deleta — SQS vai retentar e depois manda para DLQ
 			log.Warn("processamento falhou, mensagem não deletada", "erro", err)

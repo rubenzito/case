@@ -1,5 +1,9 @@
 # Case de Entrevista
 
+<p align="center">
+	<img src="assets/header.svg" alt="Case de Entrevista" width="900">
+</p>
+
 Este repositório contém uma aplicação de estudo com dois serviços em Go que se comunicam via AWS SQS e DynamoDB simulados pelo LocalStack.
 
 ## Visão geral
@@ -36,6 +40,25 @@ docker --version
 docker compose version
 go version
 aws --version
+```
+
+Nota rápida sobre dependências Go
+--------------------------------
+
+Antes de rodar `docker compose up --build`, atualize os módulos Go em todos os serviços a partir da raiz:
+
+Bash / Git Bash:
+
+```bash
+for d in services/*; do [ -f "$d/go.mod" ] && (cd "$d" && go mod tidy); done
+```
+
+
+
+Depois execute:
+
+```bash
+docker compose up --build
 ```
 
 3. Confirme que o `docker-compose.yml` existe na raiz e que o `scripts/seed.sh` está presente.
@@ -91,19 +114,26 @@ No Git Bash:
 ```bash
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
-./scripts/seed.sh
-```
-
-## Como validar
-
-### API de saúde
+Bash / Git Bash (cole os comandos abaixo um a um):
 
 ```bash
-curl -s http://localhost:8080/health
+cd services/processor && go mod tidy
+cd ../aggregator && go mod tidy
+cd ../..
 ```
 
-Deve retornar algo como:
+PowerShell (cole os comandos abaixo um a um):
 
+```powershell
+Push-Location services/processor; go mod tidy; Pop-Location
+Push-Location ..\aggregator; go mod tidy; Pop-Location
+```
+
+Depois execute:
+
+```bash
+docker compose up --build
+```
 ```json
 {"dynamodb":"ok","sqs":"ok","status":"ok"}
 ```
@@ -186,8 +216,3 @@ cd services/processor && go test ./internal/infra/worker -run TestWorkerPool_Pro
 - O endpoint `/metrics/{developer_id}` retorna `[]` quando não há eventos processados.
 - O endpoint `/metrics/{developer_id}/summary` retorna `developer não encontrado` quando não há resumo no DynamoDB.
 
-## Case / entrevista
-
-Não encontrei um arquivo chamado `case-entevista` no repositório atual. Esta documentação foi criada a partir dos arquivos presentes no repo, especialmente `Makefile`, `docker-compose.yml`, `scripts/seed.sh` e os serviços dentro de `services/`.
-
-Se houver um documento de briefing separado, por favor adicione-o ao repositório para que eu possa fazer uma validação direta contra ele.

@@ -16,11 +16,22 @@ import (
 	"github.com/rubenzito/case/processor/internal/infra/queue"
 	"github.com/rubenzito/case/processor/internal/infra/worker"
 	"github.com/rubenzito/case/processor/internal/usecase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func main() {
 	// Logger estruturado JSON
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	// Inicializa tracing (stdout exporter para demonstração)
+	tp, err := initTracer()
+	if err != nil {
+		slog.Error("erro ao inicializar tracer", "erro", err)
+		os.Exit(1)
+	}
+	defer func() { _ = tp.Shutdown(context.Background()) }()
 
 	cfg := config.Load()
 
@@ -53,4 +64,18 @@ func main() {
 	slog.Info("processor iniciado", "processor_id", cfg.ProcessorID, "workers", cfg.WorkerCount)
 	pool.Start(ctx)
 	slog.Info("processor encerrado")
+}
+
+// initTracer configura um TracerProvider com stdout exporter (apenas para demonstração local)
+func initTracer() (*sdktrace.TracerProvider, error) {
+	exp, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	if err != nil {
+		return nil, err
+	}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	return tp, nil
 }
